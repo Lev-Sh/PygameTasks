@@ -45,7 +45,6 @@ class Tile(pygame.sprite.Sprite):
             tiles_blocks_group.add(self)
 
 
-
 class Player(pygame.sprite.Sprite):
     player_image = load_image('mar.png', 'data/images')
 
