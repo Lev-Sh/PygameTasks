@@ -56,11 +56,11 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect().move(
             tile_width * pos_x + 15, tile_height * pos_y + 5)
 
-    def move(self, mX: int, mY: int):
+    def move(self, mx: int, my: int):
         old_block = self.x, self.y
-        self.rect.move_ip(mX * tile_width, mY * tile_height)
+        self.rect.move_ip(mx * tile_width, my * tile_height)
         if pygame.sprite.spritecollideany(self, tiles_blocks_group):
-            self.rect.move_ip(-mX * tile_width, -mY * tile_height)
+            self.rect.move_ip(-mx * tile_width, -my * tile_height)
 
 
 def load_level(filename, fullchar: str = '.') -> list[str]:
