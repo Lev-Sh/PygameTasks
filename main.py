@@ -119,6 +119,13 @@ def start_screen():
 
 
 if __name__ == '__main__':
+    started2 = False
+    leve = input()
+    if not os.path.exists('data/levels/' + leve + '.dat'):
+        print("The file does not exist")
+        exit()
+    else:
+        started2 = True
     screen = pygame.display.set_mode(SIZE)
     clock = pygame.time.Clock()
     start_screen()
@@ -131,15 +138,16 @@ if __name__ == '__main__':
     running = True
     started = False
 
+
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 screen.fill(BACKGROUND)
-                pl, xs, ys = generate_level(load_level('level1.dat'))
+                pl, xs, ys = generate_level(load_level(leve + '.dat'))
                 started = True
-            elif event.type == pygame.KEYDOWN and started:
+            elif event.type == pygame.KEYDOWN and started and started2:
                 match event.key:
                     case pygame.K_w:
                         pl.move(0, -1)
