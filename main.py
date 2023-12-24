@@ -118,7 +118,21 @@ def start_screen():
         clock.tick(FPS)
 
 
+class Camera:
+    # зададим начальный сдвиг камеры
+    def __init__(self):
+        self.dx = 0
+        self.dy = 0
+    def apply(self, obj):
+        obj.rect.x += self.dx
+        obj.rect.y += self.dy
+    def update(self, target):
+        self.dx = -(target.rect.x + target.rect.w // 2 - WIDTH // 2)
+        self.dy = -(target.rect.y + target.rect.h // 2 - HEIGHT // 2)
+
 if __name__ == '__main__':
+    camera = Camera()
+
     screen = pygame.display.set_mode(SIZE)
     clock = pygame.time.Clock()
     start_screen()
@@ -149,8 +163,14 @@ if __name__ == '__main__':
                         pl.move(-1, 0)
                     case pygame.K_d:
                         pl.move(1, 0)
+
         tiles_group.draw(screen)
         player_group.draw(screen)
+        if started:
+            camera.update(pl)
+            # обновляем положение всех спрайтов
+            for sprite in all_sprites:
+                camera.apply(sprite)
         pygame.display.flip()
         clock.tick(FPS)
     pygame.quit()
