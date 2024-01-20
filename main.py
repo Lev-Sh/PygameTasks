@@ -3,6 +3,7 @@ import sys
 import os
 import random
 
+# import pandas
 # import math
 
 pygame.init()
@@ -11,8 +12,10 @@ SIZE = WIDTH, HEIGHT = 600, 400
 BACKGROUND = pygame.Color('black')
 COLOR = pygame.Color('yellow')
 FPS = 60
+from data.scripts.UI import Button, ButtonGroup
 
 
+# распиление мироздания
 def terminate():
     pygame.quit()
     sys.exit()
@@ -42,8 +45,7 @@ def load_level(filename, fullchar: str = '.') -> list[str]:
     return list(map(lambda x: x.ljust(max_width, fullchar), level_map))
 
 
-item_image = load_image('apple.png', 'data/images')
-
+# изображения полей кароч
 tile_images = {
     'wall': load_image('box.png', 'data/images'),
     'appbox': load_image('apple_box.png', 'data/images'),
@@ -56,6 +58,18 @@ tile_images = {
     'ladder': load_image('ladder.png', 'data/images')
 
 }
+# BUTTTONS
+str_btn_img = load_image('start_btn.png', 'data/images')
+back_btn_img = load_image('back.png', 'data/images')
+level1_btn_img = load_image('level1.png', 'data/images')
+
+wait_images = [
+    load_image('wait_1.png', 'data/images'),
+    load_image('wait_2.png', 'data/images'),
+    load_image('wait_3.png', 'data/images'),
+    load_image('wait_4.png', 'data/images'),
+]
+
 customers_images = {
     'customer_1': load_image('customer_1.png', 'data/images')
 }
@@ -68,15 +82,16 @@ beef_image = load_image('beef.png', 'data/images')
 cooked_beef_image = load_image('beef_cooked.png', 'data/images')
 bulka_image = load_image('bulka.png', 'data/images')
 latucc_image = load_image('latucc.png', 'data/images')
+# что
 customers_can_response = {
     'None': load_image('None.png', 'data/images'),
-    'apple_image': apple_image,
+    'apple': apple_image,
     # 'bulka_image': bulka_image,
     'latucc': latucc_image,
-    'beef_image': beef_image,
-    'cooked_beef_image': cooked_beef_image
+    'beef': beef_image,
+    'cooked_beef': cooked_beef_image
 }
-customers_can_response_list = ['apple', 'beef', 'beef_cooked', 'latucc']
+customers_can_response_list = ['apple', 'beef', 'cooked_beef', 'latucc']
 tile_width = tile_height = 40
 
 
@@ -113,11 +128,9 @@ def start_screen():
     intro_text = ["...."]
 
     fon = pygame.transform.scale(load_image('fon.png', 'data/images'), (WIDTH, HEIGHT))
-    start_btns = pygame.transform.scale(load_image('start_btn.png', 'data/images'), (80, 80))
-
     screen.blit(fon, (0, 0))
-    screen.blit(start_btns, (WIDTH / 2 - 80, HEIGHT / 2 - 80))
 
+    start_button.draw(screen)
     font = pygame.font.Font(None, 30)
     text_coord = 50
     for line in intro_text:
@@ -129,15 +142,13 @@ def start_screen():
         text_coord += intro_rect.height
         screen.blit(string_rendered, intro_rect)
 
-    while True:
-        for se in pygame.event.get():
-            if se.type == pygame.QUIT:
-                terminate()
-            elif se.type == pygame.KEYDOWN or \
-                    se.type == pygame.MOUSEBUTTONDOWN:
-                return
-        pygame.display.flip()
-        clock.tick(FPS)
+
+def choose_Level(level_k):
+    #screen.fill(BACKGROUND)
+    fon = pygame.transform.scale(load_image('fon.png', 'data/images'), (WIDTH, HEIGHT))
+    screen.blit(fon, (0, 0))
+    back_button.draw(screen)
+    level1_button.draw(screen)
 
 
 class Tile(pygame.sprite.Sprite):
@@ -176,56 +187,119 @@ class Tile(pygame.sprite.Sprite):
 class Dialogue(pygame.sprite.Sprite):
     def __init__(self, x, y, resp):
         super().__init__(dialogue_group, all_sprites)
-        create(1, dropped=True, item=resp, x=(x + 0.8), y=(y - 0.6), workings=False)
-        resp = ''
+        self.respones = resp
+        self._x = x
+        self._y = y
         self.image = load_image(f'dialogue.png', 'data/images')
         self.rect = self.image.get_rect().move(
             tile_width * (x + 0.6) + 5, tile_height * (y - 0.7) + 5)
+        self.item_offset = {'x': self._x + 1.5,
+                            'y': self._y - 0.5}
+        items_group.draw(screen)
+        self.drawing_items = []
+        self.add_resp()
+
+    def add_resp(self):
+        for n in self.drawing_items:
+            n.kill()
+        self.drawing_items.clear()
+        self.item_offset['x'] = self._x + 0.8
+        self.item_offset['y'] = self._y - 0.5
+
+        for i in self.respones:
+            print(i)
+            a = Item(item=i, x=self.item_offset['x'], y=self.item_offset['y'], working=False)
+            self.drawing_items.append(a)
+
+            self.item_offset['x'] += 0.35
 
     def change(self, im):
         self.image = customers_can_response[im]
 
 
+class Customer_wait(pygame.sprite.Sprite):
+    def __init__(self, x, y):
+        super().__init__(customer_group, all_sprites)
+        self.image = wait_images[0]
+        self.rect = self.image.get_rect().move(
+            tile_width * x - 2, tile_height * y - 20)
+
+    def update(self, k):
+        if k <= 3 and k >= 0:
+            self.image = wait_images[k]
+
+
 class Customer(pygame.sprite.Sprite):
     def __init__(self):
-        super().__init__(customer_group, tiles_blocks_group, all_sprites)
-        self.image = load_image('None.png', 'data/images')
-        self.response = ''
+        super().__init__(customer_group, all_sprites)
+        self.image = load_image('customer_1.png', 'data/images')
+        self.response = []
         self.rect = self.image.get_rect().move(
             tile_width * 0 + 15, tile_height * 0 + 5)
         self.prev_awake = 0
+        self.wait_timer = 0
+        self.c_of_resp = random.randint(1, 3)
         self.d = None
+        self.wait_seconds = 20
         self.k_of_activity = random.randrange(1, 5)
+        self.active = True
         self.x = 0
         self.y = 0
+        # self.cw = Customer_wait(self.x, self.y)
 
     def update(self):
-        if pygame.sprite.spritecollideany(self, items_group):
-            if len(pygame.sprite.spritecollide(self, items_group, 0)) > 1:
-                if self.response == pygame.sprite.spritecollide(self, items_group, 0)[1].name:
-                    print('toched')
-
-                    pygame.sprite.spritecollide(self, items_group, 1)[1].dropped = True
-                    print("ACCEPTED")
-
-                    self.prev_awake = pygame.time.get_ticks()
-                    self.gone()
+        if self.active:
+            f = pygame.time.get_ticks() - self.wait_timer
+            m = round(f / 1000 / 5)
+            self.cw.update(m)
+            if pygame.time.get_ticks() - self.wait_timer > self.wait_seconds * 1000:
+                self.prev_awake = pygame.time.get_ticks()
+                self.gone()
+                self.active = False
+                self.response.clear()
+                self.d.add_resp()
+                self.cw.kill()
+        if len(self.response) == 0 and self.active:
+            self.prev_awake = pygame.time.get_ticks()
+            self.gone()
+            self.cw.kill()
+            self.active = False
+        if pygame.sprite.spritecollideany(self, items_group) and self.active:
+            # if len(pygame.sprite.spritecollide(self, items_group, 0)) > 0:
+            for i in self.response:
+                for a in pygame.sprite.spritecollide(self, items_group, 0):
+                    if i == a.name and \
+                            a.working:
+                        a.dropped = True
+                        a.kill()
+                        self.d.respones.remove(i)
+                        self.d.add_resp()
+                        pl.drop()
+                        armed = False
+                        print(armed)
         if not self.prev_awake == 0 and pygame.time.get_ticks() - self.prev_awake > 4000:
             self.awake(2, 2)
+            self.wait_timer = pygame.time.get_ticks()
+            self.active = True
             self.prev_awake = 0
 
     # def moving(self, mx, my):
     #    self.rect.move_ip(mx * tile_width, my * tile_height)
     #    self.x += mx * tile_width
     #    self.y += my * tile_height
-    #    if pygame.sprite.spritecollideany(self, tiles_blocks_group):
+    #    if pygame.sprite.spritecollideany(selfw, tiles_blocks_group):
     #        self.rect.move_ip(-mx * tile_width, -my * tile_height)
     #        self.x += -mx * tile_width
     #        self.y += -my * tile_height
 
     def awake(self, pos_x, pos_y):
-        self.response = customers_can_response_list[random.randrange(0, len(customers_can_response_list))]
-        print(self.response)
+        self.x = pos_x
+        self.y = pos_y
+        self.cw = Customer_wait(self.x, self.y)
+
+        for i in range(self.c_of_resp):
+            self.response.append(customers_can_response_list[random.randrange(0, len(customers_can_response_list))])
+            print(self.response[i])
         self.image = customers_images['customer_1']
 
         self.rect = self.image.get_rect().move(
@@ -319,7 +393,13 @@ class Timer:
             screen.blit(text, (450, 20))
             pygame.display.flip()
             self.tm -= 0.02
+            if self.tm <= 1:
+                return True
             self.replace()
+            return False
+
+    def stop(self):
+        self.started = False
 
 
 class Item(pygame.sprite.Sprite):
@@ -349,13 +429,13 @@ class Item(pygame.sprite.Sprite):
             case "None":
                 return load_image('None.png', 'data/images')
             case "apple":
-                return load_image('apple.png', 'data/images')
+                return apple_image
             case "latucc":
-                return load_image('latucc.png', 'data/images')
+                return latucc_image
             case "beef":
-                return load_image('beef.png', 'data/images')
+                return beef_image
             case "cooked_beef":
-                return load_image('beef_cooked.png', 'data/images')
+                return cooked_beef_image
         return load_image('apple.png', 'data/images')
 
     def update(self, xx, yy):
@@ -375,7 +455,7 @@ class Item(pygame.sprite.Sprite):
         print("cook", self.name)
         if self.name == "beef":
             self.image = cooked_beef_image
-            self.name = "beef_cooked"
+            self.name = "cooked_beef"
 
 
 def create(count: int, dropped, item: str, x, y, workings: bool):
@@ -392,11 +472,23 @@ def create(count: int, dropped, item: str, x, y, workings: bool):
 
 
 if __name__ == '__main__':
+    LEVEL_POINTS = 0
     screen = pygame.display.set_mode(SIZE)
     clock = pygame.time.Clock()
-    start_screen()
     start_time = 0
     armed = False
+    level_choose = False
+    buttons_group = ButtonGroup()
+    levels_buttons_group = ButtonGroup()
+    start_button = Button(img=str_btn_img, hover_img=str_btn_img, pos=(100, HEIGHT // 2), width=80, height=80,
+                          text="START", text_size=30, text_color=pygame.color.Color(0, 0, 0),
+                          color=pygame.color.Color(250, 250, 250), group=buttons_group)
+    back_button = Button(img=str_btn_img, hover_img=str_btn_img, pos=(50, 50), width=80, height=80,
+                         text="BACK", text_size=30, text_color=pygame.color.Color(0, 0, 0),
+                         color=pygame.color.Color(250, 250, 250), group=buttons_group)
+    level1_button = Button(img=level1_btn_img, hover_img=str_btn_img, pos=(120, 120), width=80, height=80,
+                         text="LEVEL1", text_size=30, text_color=pygame.color.Color(0, 0, 0),
+                         color=pygame.color.Color(250, 250, 250), group=levels_buttons_group)
     all_sprites = pygame.sprite.Group()
     tiles_group = pygame.sprite.Group()
     player_group = pygame.sprite.Group()
@@ -410,31 +502,48 @@ if __name__ == '__main__':
     # Customers and dialogues
     customer_group = pygame.sprite.Group()
     dialogue_group = pygame.sprite.Group()
-
     running = True
     started = False
     space_clicked = False
     level_time = 1
     c = Customer()
     t = Timer()
-    pl = Player(100, 100)
-    while running:
+    pl = Player(200, 100)
+    start_screen()
+    pygame.display.flip()
 
+    while running:
+        mouse_pos = pygame.mouse.get_pos()
+        buttons_group.check_hover(mouse_pos)
+        if level_choose:
+            levels_buttons_group.check_hover(mouse_pos)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
-            elif event.type == pygame.MOUSEBUTTONDOWN and not started:
-
-                screen.fill(BACKGROUND)
-                pl, xs, ys = generate_level(load_level('level1.dat'))
-                apple_box_group.draw(screen)
-                holodilnik_group.draw(screen)
-                electro_plate_group.draw(screen)
-                c.awake(1, 1)
-                create(2, True, "apple", pl.x, pl.y, True)
-                create(2, True, "beef", pl.x, pl.y, True)
-                t.start(60)
-                started = True
+            if not started:
+                if start_button.handle_event(event) and not level_choose:
+                    choose_Level(1)
+                    level_choose = True
+                    pygame.display.flip()
+                elif back_button.handle_event(event) and level_choose:
+                    start_screen()
+                    level_choose = False
+                    pygame.display.flip()
+                elif level1_button.handle_event(event) and level_choose:
+                    started = True
+                    screen.fill(BACKGROUND)
+                    pygame.display.flip()
+                    level_choose = False
+                    pl, xs, ys = generate_level(load_level('level1.dat'))
+                    apple_box_group.draw(screen)
+                    holodilnik_group.draw(screen)
+                    electro_plate_group.draw(screen)
+                    c.awake(1, 1)
+                    create(2, True, "apple", pl.x, pl.y, True)
+                    create(2, True, "beef", pl.x, pl.y, True)
+                    t.start(60)
+                    # started = True
+                    break
             keys = pygame.key.get_pressed()
             if keys[pygame.K_e]:
                 pl.cook_item()
@@ -461,15 +570,19 @@ if __name__ == '__main__':
                 a.update(pl.x, pl.y)
             for b in all_customers:
                 b.update()
-            t.update()
-        tiles_group.draw(screen)
-        customer_group.draw(screen)
-        dialogue_group.draw(screen)
-        electro_plate_group.draw(screen)
-        holodilnik_group.draw(screen)
-        player_group.draw(screen)
+            tiles_group.draw(screen)
+            customer_group.draw(screen)
+            dialogue_group.draw(screen)
+            electro_plate_group.draw(screen)
+            holodilnik_group.draw(screen)
+            items_group.draw(screen)
+            player_group.draw(screen)
 
-        items_group.draw(screen)
-        # pygame.display.flip()
-        clock.tick(FPS)
+            if t.update():
+                started = False
+                t.stop()
+                start_screen()
+
+            # pygame.display.flip()
+            clock.tick(FPS)
     terminate()
