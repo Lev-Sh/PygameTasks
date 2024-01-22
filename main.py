@@ -12,7 +12,7 @@ SIZE = WIDTH, HEIGHT = 600, 400
 BACKGROUND = pygame.Color('black')
 COLOR = pygame.Color('yellow')
 FPS = 60
-from data.scripts.UI import Button, ButtonGroup
+from data.scripts.UI import Button, ButtonGroup, DopText
 
 
 # распиление мироздания
@@ -45,6 +45,23 @@ def load_level(filename, fullchar: str = '.') -> list[str]:
     return list(map(lambda x: x.ljust(max_width, fullchar), level_map))
 
 
+def get_level_time(filename):
+    filename = os.path.join('data/levels', filename)
+
+    with open(filename, 'r', encoding='utf-8') as fl:
+        level_time = fl.readlines()[11]
+    return level_time
+
+
+def load_days(filename, path):
+    filename = os.path.join(path, filename)
+    with open(filename, 'r', encoding='utf-8') as file:
+        a = file.readlines()
+        level_money = a[0].split()
+        level_respect = a[1].split()
+    return level_money, level_respect
+
+
 # изображения полей кароч
 tile_images = {
     'wall': load_image('box.png', 'data/images'),
@@ -60,8 +77,13 @@ tile_images = {
 }
 # BUTTTONS
 str_btn_img = load_image('start_btn.png', 'data/images')
+hv_str_btn_img = load_image('hv_start_btn.png', 'data/images')
 back_btn_img = load_image('back.png', 'data/images')
 level1_btn_img = load_image('level1.png', 'data/images')
+none_btn = load_image('None.png', 'data/images')
+left_arrow = load_image('right_arrow.png', 'data/images')
+right_arrow = load_image('left_arrow.png', 'data/images')
+personal_card = load_image('person_card.png', 'data/images')
 
 wait_images = [
     load_image('wait_1.png', 'data/images'),
@@ -82,6 +104,8 @@ beef_image = load_image('beef.png', 'data/images')
 cooked_beef_image = load_image('beef_cooked.png', 'data/images')
 bulka_image = load_image('bulka.png', 'data/images')
 latucc_image = load_image('latucc.png', 'data/images')
+money_image = load_image('money.png', 'data/images')
+
 # что
 customers_can_response = {
     'None': load_image('None.png', 'data/images'),
@@ -97,8 +121,8 @@ tile_width = tile_height = 40
 
 def generate_level(level):
     new_player, x, y = None, None, None
-    for y in range(len(level)):
-        for x in range(len(level[y])):
+    for y in range(len(level) - 1):
+        for x in range(len(level[y]) - 1):
             if level[y][x] == '.':
                 Tile('empty', x, y)
             elif level[y][x] == ',':
@@ -144,11 +168,13 @@ def start_screen():
 
 
 def choose_Level(level_k):
-    #screen.fill(BACKGROUND)
+    # screen.fill(BACKGROUND)
     fon = pygame.transform.scale(load_image('fon.png', 'data/images'), (WIDTH, HEIGHT))
     screen.blit(fon, (0, 0))
     back_button.draw(screen)
-    level1_button.draw(screen)
+    calendare_button.draw(screen)
+    calendare_button_next.draw(screen)
+    calendare_button_prev.draw(screen)
 
 
 class Tile(pygame.sprite.Sprite):
@@ -192,7 +218,7 @@ class Dialogue(pygame.sprite.Sprite):
         self._y = y
         self.image = load_image(f'dialogue.png', 'data/images')
         self.rect = self.image.get_rect().move(
-            tile_width * (x + 0.6) + 5, tile_height * (y - 0.7) + 5)
+            tile_width * (x + 0.6) + 3, tile_height * (y - 0.7) + 3)
         self.item_offset = {'x': self._x + 1.5,
                             'y': self._y - 0.5}
         items_group.draw(screen)
@@ -261,20 +287,23 @@ class Customer(pygame.sprite.Sprite):
                 self.cw.kill()
         if len(self.response) == 0 and self.active:
             self.prev_awake = pygame.time.get_ticks()
+            create(1, False, 'money', self.x, self.y, True)
             self.gone()
             self.cw.kill()
             self.active = False
+            return self.c_of_resp * 100
         if pygame.sprite.spritecollideany(self, items_group) and self.active:
             # if len(pygame.sprite.spritecollide(self, items_group, 0)) > 0:
             for i in self.response:
                 for a in pygame.sprite.spritecollide(self, items_group, 0):
                     if i == a.name and \
                             a.working:
+                        pl.drop()
+
                         a.dropped = True
                         a.kill()
                         self.d.respones.remove(i)
                         self.d.add_resp()
-                        pl.drop()
                         armed = False
                         print(armed)
         if not self.prev_awake == 0 and pygame.time.get_ticks() - self.prev_awake > 4000:
@@ -282,6 +311,7 @@ class Customer(pygame.sprite.Sprite):
             self.wait_timer = pygame.time.get_ticks()
             self.active = True
             self.prev_awake = 0
+        return 0
 
     # def moving(self, mx, my):
     #    self.rect.move_ip(mx * tile_width, my * tile_height)
@@ -296,7 +326,7 @@ class Customer(pygame.sprite.Sprite):
         self.x = pos_x
         self.y = pos_y
         self.cw = Customer_wait(self.x, self.y)
-
+        self.c_of_resp = random.randint(1, 3)
         for i in range(self.c_of_resp):
             self.response.append(customers_can_response_list[random.randrange(0, len(customers_can_response_list))])
             print(self.response[i])
@@ -336,9 +366,9 @@ class Player(pygame.sprite.Sprite):
             self.rect.move_ip(-mx * tile_width, -my * tile_height)
             self.x += -mx * tile_width
             self.y += -my * tile_height
+        player_image.set_colorkey(player_skin)
 
     def get_item(self):
-
         if pygame.sprite.spritecollideany(self, apple_box_group):
             self.inventory = "apple"
             create(1, False, self.inventory, pl.x, pl.y, True)
@@ -381,6 +411,7 @@ class Timer:
 
     def replace(self):
         s = self.tm
+        self.minutes = 0
         while s > 60:
             s -= 60
             self.minutes += 1
@@ -436,6 +467,8 @@ class Item(pygame.sprite.Sprite):
                 return beef_image
             case "cooked_beef":
                 return cooked_beef_image
+            case "money":
+                return money_image
         return load_image('apple.png', 'data/images')
 
     def update(self, xx, yy):
@@ -471,24 +504,55 @@ def create(count: int, dropped, item: str, x, y, workings: bool):
             pl.items.append(item)
 
 
+def next_page(DAY_CHOOSE, screen, money_list, respect_list):
+    if DAY_CHOOSE < 6:
+        DAY_CHOOSE += 1
+        calendare_text1.retext(newtext=f'DAY {DAY_CHOOSE}', screen=screen)
+        calendare_text2.retext(newtext=f'{money_list[DAY_CHOOSE - 1]}', screen=screen)
+        calendare_text3.retext(newtext=f'{respect_list[DAY_CHOOSE - 1]}', screen=screen)
+    return DAY_CHOOSE
+
+
+def prev_page(DAY_CHOOSE, screen, money_list, respect_list):
+    if DAY_CHOOSE > 1:
+        DAY_CHOOSE -= 1
+        calendare_text1.retext(newtext=f'DAY {DAY_CHOOSE}', screen=screen)
+        calendare_text2.retext(newtext=f'{money_list[DAY_CHOOSE - 1]}', screen=screen)
+        calendare_text3.retext(newtext=f'{respect_list[DAY_CHOOSE - 1]}', screen=screen)
+    return DAY_CHOOSE
+
+
 if __name__ == '__main__':
+    player_skin = pygame.color.Color(255, 20, 20)
     LEVEL_POINTS = 0
+    level_money = []
+    level_respect = []
+    level_money, level_respect = load_days('save1', 'data/saves')
     screen = pygame.display.set_mode(SIZE)
     clock = pygame.time.Clock()
     start_time = 0
     armed = False
     level_choose = False
+    DAY_CHOOSE = 1
+    DAY = 0
     buttons_group = ButtonGroup()
     levels_buttons_group = ButtonGroup()
-    start_button = Button(img=str_btn_img, hover_img=str_btn_img, pos=(100, HEIGHT // 2), width=80, height=80,
-                          text="START", text_size=30, text_color=pygame.color.Color(0, 0, 0),
+    start_button = Button(img=str_btn_img, hover_img=hv_str_btn_img, pos=(100, HEIGHT // 2), width=80, height=80,
                           color=pygame.color.Color(250, 250, 250), group=buttons_group)
-    back_button = Button(img=str_btn_img, hover_img=str_btn_img, pos=(50, 50), width=80, height=80,
-                         text="BACK", text_size=30, text_color=pygame.color.Color(0, 0, 0),
+    start_button_text = DopText(0, 0, start_button, text="START", text_color=pygame.color.Color(0, 0, 0), text_size=30)
+    back_button = Button(img=str_btn_img, hover_img=hv_str_btn_img, pos=(50, 50), width=80, height=80,
                          color=pygame.color.Color(250, 250, 250), group=buttons_group)
-    level1_button = Button(img=level1_btn_img, hover_img=str_btn_img, pos=(120, 120), width=80, height=80,
-                         text="LEVEL1", text_size=30, text_color=pygame.color.Color(0, 0, 0),
-                         color=pygame.color.Color(250, 250, 250), group=levels_buttons_group)
+    calendare_button = Button(img=level1_btn_img, hover_img=str_btn_img, pos=(300, 200), width=280, height=300,
+                              color=pygame.color.Color(250, 250, 250), group=levels_buttons_group)
+    calendare_button_prev = Button(img=right_arrow, hover_img=right_arrow, pos=(200, 360), width=40, height=50,
+                                   color=pygame.color.Color(250, 250, 250), group=levels_buttons_group)
+    calendare_button_next = Button(img=left_arrow, hover_img=left_arrow, pos=(400, 360), width=40, height=50,
+                                   color=pygame.color.Color(250, 250, 250), group=levels_buttons_group)
+    calendare_text1 = DopText(8, -45, calendare_button, pygame.color.Color(0, 0, 0), "DAY 1", 60)
+    calendare_text2 = DopText(8, 10, calendare_button, pygame.color.Color(0, 0, 0), "0", 40)
+    calendare_text3 = DopText(8, 70, calendare_button, pygame.color.Color(0, 0, 0), "0", 40)
+    personal_card_button = Button((400, 200), 350, 350, personal_card, personal_card, group=buttons_group,
+                                  color=pygame.color.Color(10, 10, 10))
     all_sprites = pygame.sprite.Group()
     tiles_group = pygame.sprite.Group()
     player_group = pygame.sprite.Group()
@@ -505,45 +569,66 @@ if __name__ == '__main__':
     running = True
     started = False
     space_clicked = False
-    level_time = 1
+    level_time = get_level_time(f'level{DAY_CHOOSE}.dat')
     c = Customer()
     t = Timer()
     pl = Player(200, 100)
     start_screen()
     pygame.display.flip()
-
+    load_days('save1', 'data/saves')
     while running:
         mouse_pos = pygame.mouse.get_pos()
         buttons_group.check_hover(mouse_pos)
-        if level_choose:
-            levels_buttons_group.check_hover(mouse_pos)
+        if not started:
+            if level_choose:
+                levels_buttons_group.check_hover(mouse_pos)
+                back_button.draw(screen)
+            else:
+                start_button.draw(screen)
+                personal_card_button.draw(screen)
+
+        pygame.display.flip()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
             if not started:
                 if start_button.handle_event(event) and not level_choose:
-                    choose_Level(1)
+                    choose_Level(DAY_CHOOSE)
                     level_choose = True
                     pygame.display.flip()
                 elif back_button.handle_event(event) and level_choose:
                     start_screen()
                     level_choose = False
                     pygame.display.flip()
-                elif level1_button.handle_event(event) and level_choose:
+                elif calendare_button.handle_event(event) and level_choose:
                     started = True
                     screen.fill(BACKGROUND)
                     pygame.display.flip()
                     level_choose = False
-                    pl, xs, ys = generate_level(load_level('level1.dat'))
+                    pl, xs, ys = generate_level(load_level(f'level{DAY_CHOOSE}.dat'))
                     apple_box_group.draw(screen)
                     holodilnik_group.draw(screen)
                     electro_plate_group.draw(screen)
                     c.awake(1, 1)
-                    create(2, True, "apple", pl.x, pl.y, True)
+                    # create(2, True, "apple", pl.x, pl.y, True)
                     create(2, True, "beef", pl.x, pl.y, True)
-                    t.start(60)
-                    # started = True
+                    level_time = get_level_time(f'level{DAY_CHOOSE}.dat')
+                    print(level_time, DAY_CHOOSE)
+
+                    t.start(int(level_time))
+                    started = True
                     break
+                elif calendare_button_next.handle_event(event) and level_choose:
+                    DAY_CHOOSE = next_page(DAY_CHOOSE, screen, level_money, level_respect)
+                    choose_Level(DAY_CHOOSE)
+                    level_choose = True
+                    pygame.display.flip()
+                elif calendare_button_prev.handle_event(event) and level_choose:
+                    DAY_CHOOSE = prev_page(DAY_CHOOSE, screen, level_money, level_respect)
+                    choose_Level(DAY_CHOOSE)
+                    level_choose = True
+                    pygame.display.flip()
+
             keys = pygame.key.get_pressed()
             if keys[pygame.K_e]:
                 pl.cook_item()
@@ -570,6 +655,9 @@ if __name__ == '__main__':
                 a.update(pl.x, pl.y)
             for b in all_customers:
                 b.update()
+
+            LEVEL_POINTS += c.update()
+
             tiles_group.draw(screen)
             customer_group.draw(screen)
             dialogue_group.draw(screen)
