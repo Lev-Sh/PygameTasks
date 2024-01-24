@@ -2,8 +2,8 @@ import pygame
 import sys
 import os
 import random
+import pandas
 
-# import pandas
 # import math
 
 pygame.init()
@@ -19,6 +19,18 @@ from data.scripts.UI import Button, ButtonGroup, DopText
 def terminate():
     pygame.quit()
     sys.exit()
+
+
+def change_save_file(DAYCH: int, points: int = 0, money: int = 0):
+    df = pandas.read_csv('data/saves/save1', header=None, sep=' ')
+    new_value = points
+    df.iloc[0, DAYCH - 1] = int(new_value)
+    df.to_csv('data/saves/save1', header=False, index=False, sep=' ')
+    new_valuem = money
+    df.iloc[1, DAYCH - 1] = int(new_valuem)
+    df.to_csv('data/saves/save1', header=False, index=False, sep=' ')
+    with open('data/saves/save1', 'r') as file:
+        file.close()
 
 
 def load_image(name: str, path: str = 'data', colorway: None | pygame.Color | str | int = None) -> pygame.Surface:
@@ -49,8 +61,16 @@ def get_level_time(filename):
     filename = os.path.join('data/levels', filename)
 
     with open(filename, 'r', encoding='utf-8') as fl:
-        level_time = fl.readlines()[11]
-    return level_time
+        level_times = fl.readlines()[11]
+    return level_times
+
+
+def get_level_customers(filename):
+    filename = os.path.join('data/levels', filename)
+
+    with open(filename, 'r', encoding='utf-8') as fl:
+        level_c_customerss = fl.readlines()[12]
+    return int(level_c_customerss)
 
 
 def load_days(filename, path):
@@ -273,24 +293,26 @@ class Customer(pygame.sprite.Sprite):
         self.y = 0
         # self.cw = Customer_wait(self.x, self.y)
 
+    def clear(self):
+        self.prev_awake = pygame.time.get_ticks()
+        self.gone()
+        self.active = False
+        self.response.clear()
+        self.d.add_resp()
+        self.cw.kill()
+        pl.drop()
+        armed = False
+
     def update(self):
         if self.active:
             f = pygame.time.get_ticks() - self.wait_timer
             m = round(f / 1000 / 5)
             self.cw.update(m)
             if pygame.time.get_ticks() - self.wait_timer > self.wait_seconds * 1000:
-                self.prev_awake = pygame.time.get_ticks()
-                self.gone()
-                self.active = False
-                self.response.clear()
-                self.d.add_resp()
-                self.cw.kill()
+                self.clear()
         if len(self.response) == 0 and self.active:
-            self.prev_awake = pygame.time.get_ticks()
             create(1, False, 'money', self.x, self.y, True)
-            self.gone()
-            self.cw.kill()
-            self.active = False
+            self.clear()
             return self.c_of_resp * 100
         if pygame.sprite.spritecollideany(self, items_group) and self.active:
             # if len(pygame.sprite.spritecollide(self, items_group, 0)) > 0:
@@ -305,9 +327,8 @@ class Customer(pygame.sprite.Sprite):
                         self.d.respones.remove(i)
                         self.d.add_resp()
                         armed = False
-                        print(armed)
         if not self.prev_awake == 0 and pygame.time.get_ticks() - self.prev_awake > 4000:
-            self.awake(2, 2)
+            self.awake(random.randrange(0, 6), random.randrange(1, 4))
             self.wait_timer = pygame.time.get_ticks()
             self.active = True
             self.prev_awake = 0
@@ -323,13 +344,15 @@ class Customer(pygame.sprite.Sprite):
     #        self.y += -my * tile_height
 
     def awake(self, pos_x, pos_y):
+        if pygame.sprite.spritecollideany(self, customer_group) and self.active:
+            pos_x += 1
+            pos_y += 1
         self.x = pos_x
         self.y = pos_y
         self.cw = Customer_wait(self.x, self.y)
         self.c_of_resp = random.randint(1, 3)
         for i in range(self.c_of_resp):
             self.response.append(customers_can_response_list[random.randrange(0, len(customers_can_response_list))])
-            print(self.response[i])
         self.image = customers_images['customer_1']
 
         self.rect = self.image.get_rect().move(
@@ -485,7 +508,6 @@ class Item(pygame.sprite.Sprite):
                 self.y += direction_y
 
     def cook(self):
-        print("cook", self.name)
         if self.name == "beef":
             self.image = cooked_beef_image
             self.name = "cooked_beef"
@@ -553,6 +575,11 @@ if __name__ == '__main__':
     calendare_text3 = DopText(8, 70, calendare_button, pygame.color.Color(0, 0, 0), "0", 40)
     personal_card_button = Button((400, 200), 350, 350, personal_card, personal_card, group=buttons_group,
                                   color=pygame.color.Color(10, 10, 10))
+    card_text1 = DopText(80, 3, personal_card_button, pygame.color.Color("black"), "24", 30)
+    card_text2 = DopText(-100, -60, personal_card_button, pygame.color.Color("black"), "Param", 30)
+    card_text3 = DopText(-90, -25, personal_card_button, pygame.color.Color("black"), "Paramov", 30)
+    card_text4 = DopText(80, -25, personal_card_button, pygame.color.Color("black"), "male", 30)
+
     all_sprites = pygame.sprite.Group()
     tiles_group = pygame.sprite.Group()
     player_group = pygame.sprite.Group()
@@ -570,7 +597,7 @@ if __name__ == '__main__':
     started = False
     space_clicked = False
     level_time = get_level_time(f'level{DAY_CHOOSE}.dat')
-    c = Customer()
+    # c = Customer()
     t = Timer()
     pl = Player(200, 100)
     start_screen()
@@ -601,20 +628,31 @@ if __name__ == '__main__':
                     level_choose = False
                     pygame.display.flip()
                 elif calendare_button.handle_event(event) and level_choose:
+                    LEVEL_POINTS = 0
                     started = True
                     screen.fill(BACKGROUND)
                     pygame.display.flip()
                     level_choose = False
+                    pl.kill()
+
                     pl, xs, ys = generate_level(load_level(f'level{DAY_CHOOSE}.dat'))
+                    pl.items.clear()
                     apple_box_group.draw(screen)
                     holodilnik_group.draw(screen)
                     electro_plate_group.draw(screen)
-                    c.awake(1, 1)
-                    # create(2, True, "apple", pl.x, pl.y, True)
-                    create(2, True, "beef", pl.x, pl.y, True)
-                    level_time = get_level_time(f'level{DAY_CHOOSE}.dat')
-                    print(level_time, DAY_CHOOSE)
+                    level_c_customers = get_level_customers(f'level{DAY_CHOOSE}.dat')
+                    for n in all_customers:
+                        n.clear()
+                        n.kill()
+                    for k in range(level_c_customers):
+                        c = Customer()
+                        c.awake(random.randrange(0, 6), random.randrange(1, 4))
+                        all_customers.append(c)
+                        customer_group.draw(screen)
 
+                    # create(2, True, "apple", pl.x, pl.y, True)
+                    create(2, True, "beef", 200, 200, True)
+                    level_time = get_level_time(f'level{DAY_CHOOSE}.dat')
                     t.start(int(level_time))
                     started = True
                     break
@@ -655,21 +693,30 @@ if __name__ == '__main__':
                 a.update(pl.x, pl.y)
             for b in all_customers:
                 b.update()
-
-            LEVEL_POINTS += c.update()
+                LEVEL_POINTS += b.update()
 
             tiles_group.draw(screen)
-            customer_group.draw(screen)
             dialogue_group.draw(screen)
             electro_plate_group.draw(screen)
             holodilnik_group.draw(screen)
             items_group.draw(screen)
             player_group.draw(screen)
+            customer_group.draw(screen)
 
             if t.update():
                 started = False
                 t.stop()
                 start_screen()
+                change_save_file(DAY_CHOOSE, LEVEL_POINTS, 100)
+                level_money, level_respect = load_days('save1', 'data/saves')
+
+                next_page(DAY_CHOOSE, screen, level_money, level_respect)
+                prev_page(DAY_CHOOSE, screen, level_money, level_respect)
+
+                start_screen()
+
+                print(LEVEL_POINTS)
+                LEVEL_POINTS = 0
 
             # pygame.display.flip()
             clock.tick(FPS)
