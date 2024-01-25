@@ -92,6 +92,7 @@ tile_images = {
     'electric_stove': load_image('electro_doska.png', 'data/images'),
     'empty': load_image('floor.png', 'data/images'),
     'empty2': load_image('floor3.png', 'data/images'),
+    'bankomat': load_image('bankomat.png', 'data/images'),
     'ladder': load_image('ladder.png', 'data/images')
 
 }
@@ -164,7 +165,8 @@ def generate_level(level):
             elif level[y][x] == '@':
                 Tile('empty2', x, y)
                 new_player = Player(x, y)
-
+            elif level[y][x] == '$':
+                Tile('bankomat', x, y)
     return new_player, x + 1, y + 1
 
 
@@ -216,7 +218,9 @@ class Tile(pygame.sprite.Sprite):
         if tile_type == 'electric_stove':
             electro_plate_group.add(self)
             # tiles_blocks_group.add(self)
-
+        if tile_type == 'bankomat':
+            bankomat_group.add(self)
+            # tiles_blocks_group.add(self)
 
 # class AppleBox(pygame.sprite.Sprite):
 
@@ -282,6 +286,8 @@ class Customer(pygame.sprite.Sprite):
         self.response = []
         self.rect = self.image.get_rect().move(
             tile_width * 0 + 15, tile_height * 0 + 5)
+        customer_group.draw(screen)
+
         self.prev_awake = 0
         self.wait_timer = 0
         self.c_of_resp = random.randint(1, 3)
@@ -415,6 +421,12 @@ class Player(pygame.sprite.Sprite):
         if pygame.sprite.spritecollideany(self, electro_plate_group):
             pygame.sprite.spritecollide(self, items_group, 0)[0].cook()
 
+    def put_money(self) -> int:
+        if pygame.sprite.spritecollideany(self, bankomat_group):
+            pygame.sprite.spritecollide(self, items_group, 1)[0].cook()
+            return 100
+        return 0
+
 
 class Timer:
     def __init__(self):
@@ -547,6 +559,7 @@ def prev_page(DAY_CHOOSE, screen, money_list, respect_list):
 if __name__ == '__main__':
     player_skin = pygame.color.Color(255, 20, 20)
     LEVEL_POINTS = 0
+    LEVEL_MONEY = 0
     level_money = []
     level_respect = []
     level_money, level_respect = load_days('save1', 'data/saves')
@@ -585,6 +598,7 @@ if __name__ == '__main__':
     player_group = pygame.sprite.Group()
     tiles_blocks_group = pygame.sprite.Group()
     items_group = pygame.sprite.Group()
+    bankomat_group = pygame.sprite.Group()
     # functionals blocks
     apple_box_group = pygame.sprite.Group()
     holodilnik_group = pygame.sprite.Group()
@@ -670,6 +684,7 @@ if __name__ == '__main__':
             keys = pygame.key.get_pressed()
             if keys[pygame.K_e]:
                 pl.cook_item()
+                LEVEL_MONEY += pl.put_money()
             if keys[pygame.K_SPACE] and not armed:
                 pl.get_item()
                 armed = True
@@ -707,7 +722,7 @@ if __name__ == '__main__':
                 started = False
                 t.stop()
                 start_screen()
-                change_save_file(DAY_CHOOSE, LEVEL_POINTS, 100)
+                change_save_file(DAY_CHOOSE, LEVEL_POINTS, LEVEL_MONEY)
                 level_money, level_respect = load_days('save1', 'data/saves')
 
                 next_page(DAY_CHOOSE, screen, level_money, level_respect)
@@ -715,7 +730,7 @@ if __name__ == '__main__':
 
                 start_screen()
 
-                print(LEVEL_POINTS)
+                LEVEL_MONEY = 0
                 LEVEL_POINTS = 0
 
             # pygame.display.flip()
