@@ -257,7 +257,6 @@ class Dialogue(pygame.sprite.Sprite):
         self.item_offset['y'] = self._y - 0.5
 
         for i in self.respones:
-            print(i)
             a = Item(item=i, x=self.item_offset['x'], y=self.item_offset['y'], working=False)
             self.drawing_items.append(a)
 
@@ -306,8 +305,8 @@ class Customer(pygame.sprite.Sprite):
         self.response.clear()
         self.d.add_resp()
         self.cw.kill()
-        pl.drop()
-        armed = False
+        #pl.drop()
+        #armed = False
 
     def update(self):
         if self.active:
@@ -317,7 +316,6 @@ class Customer(pygame.sprite.Sprite):
             if pygame.time.get_ticks() - self.wait_timer > self.wait_seconds * 1000:
                 self.clear()
         if len(self.response) == 0 and self.active:
-            create(1, False, 'money', self.x, self.y, True)
             self.clear()
             return self.c_of_resp * 100
         if pygame.sprite.spritecollideany(self, items_group) and self.active:
@@ -326,13 +324,13 @@ class Customer(pygame.sprite.Sprite):
                 for a in pygame.sprite.spritecollide(self, items_group, 0):
                     if i == a.name and \
                             a.working:
-                        pl.drop()
+                        #pl.drop()
+                        pl.inventory = "None"
+                        armed = False
 
-                        a.dropped = True
                         a.kill()
                         self.d.respones.remove(i)
                         self.d.add_resp()
-                        armed = False
         if not self.prev_awake == 0 and pygame.time.get_ticks() - self.prev_awake > 4000:
             self.awake(random.randrange(0, 6), random.randrange(1, 4))
             self.wait_timer = pygame.time.get_ticks()
@@ -414,8 +412,8 @@ class Player(pygame.sprite.Sprite):
     def drop(self):
         if pygame.sprite.spritecollide(self, items_group, 0):
             pygame.sprite.spritecollide(self, items_group, 0)[0].dropped = True
-            # pl.inventory = "None"
-            # print(pl.inventory)
+            pl.inventory = "None"
+            armed = False
 
     def cook_item(self):
         if pygame.sprite.spritecollideany(self, electro_plate_group):
@@ -533,7 +531,7 @@ def create(count: int, dropped, item: str, x, y, workings: bool):
             item = Item(pl.x / tile_width, pl.y / tile_height, item, workings)
         if workings:
             item.dropped = dropped
-            print(item.image, item.name, item.dropped, item.x, item.y, pl.x, pl.y)
+            #print(item.image, item.name, item.dropped, item.x, item.y, pl.x, pl.y)
             items_group.draw(screen)
             pl.items.append(item)
 
@@ -577,6 +575,7 @@ if __name__ == '__main__':
     start_button_text = DopText(0, 0, start_button, text="START", text_color=pygame.color.Color(0, 0, 0), text_size=30)
     back_button = Button(img=str_btn_img, hover_img=hv_str_btn_img, pos=(50, 50), width=80, height=80,
                          color=pygame.color.Color(250, 250, 250), group=buttons_group)
+    back_button_text = DopText(0, 0, back_button, text="BACK", text_color=pygame.color.Color(0, 0, 0), text_size=30)
     calendare_button = Button(img=level1_btn_img, hover_img=str_btn_img, pos=(300, 200), width=280, height=300,
                               color=pygame.color.Color(250, 250, 250), group=levels_buttons_group)
     calendare_button_prev = Button(img=right_arrow, hover_img=right_arrow, pos=(200, 360), width=40, height=50,
@@ -691,6 +690,7 @@ if __name__ == '__main__':
             if keys[pygame.K_q] and armed:
                 pl.drop()
                 armed = False
+
             if keys[pygame.K_w]:
                 player_image = load_image('player.png', 'data/images')
                 pl.move(0, -0.2)
@@ -704,6 +704,8 @@ if __name__ == '__main__':
                 player_image = load_image('player_90.png', 'data/images')
                 pl.move(0.2, 0)
         if started:
+            if pl.inventory == "None":
+                armed = False
             for a in pl.items:
                 a.update(pl.x, pl.y)
             for b in all_customers:
