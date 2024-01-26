@@ -224,21 +224,9 @@ class Tile(pygame.sprite.Sprite):
             # tiles_blocks_group.add(self)
 
 
-# class AppleBox(pygame.sprite.Sprite):
-
-#   def __init__(self, x , y):
-#       super().__init__(apple_box_group, all_sprites)
-#       self.image = tile_images['appbox']
-#       self.rect = self.image.get_rect().move(
-#           tile_width * (x + 2) + 5, tile_height * (y - 2) + 5)
-
-#   def get_apple(self):
-#       pl.inventory = "apple"
-#       create(1)
-
 class Dialogue(pygame.sprite.Sprite):
     def __init__(self, x, y, resp):
-        super().__init__(dialogue_group, all_sprites)
+        super().__init__(dialogue_group)
         self.respones = resp
         self._x = x
         self._y = y
@@ -270,7 +258,7 @@ class Dialogue(pygame.sprite.Sprite):
 
 class Customer_wait(pygame.sprite.Sprite):
     def __init__(self, x, y):
-        super().__init__(customer_group, all_sprites)
+        super().__init__(customer_group)
         self.image = wait_images[0]
         self.rect = self.image.get_rect().move(
             tile_width * x - 2, tile_height * y - 20)
@@ -282,7 +270,7 @@ class Customer_wait(pygame.sprite.Sprite):
 
 class Customer(pygame.sprite.Sprite):
     def __init__(self):
-        super().__init__(customer_group, all_sprites)
+        super().__init__(customer_group)
         self.image = load_image('customer_1.png', 'data/images')
         self.response = []
         self.rect = self.image.get_rect().move(
@@ -744,6 +732,9 @@ if __name__ == '__main__':
                 start_screen()
                 change_save_file(level_respect, level_money,DAY_CHOOSE, LEVEL_POINTS, LEVEL_MONEY)
                 level_money, level_respect = load_days('save1', 'data/saves')
+                for i in all_customers:
+                    i.clear()
+                all_customers.clear()
 
                 next_page(DAY_CHOOSE, screen, level_money, level_respect)
                 prev_page(DAY_CHOOSE, screen, level_money, level_respect)
