@@ -3,6 +3,7 @@ import sys
 import os
 import random
 import pandas
+from data.scripts.UI import Button, ButtonGroup, DopText
 
 # import math
 
@@ -12,7 +13,6 @@ SIZE = WIDTH, HEIGHT = 600, 400
 BACKGROUND = pygame.Color('black')
 COLOR = pygame.Color('yellow')
 FPS = 60
-from data.scripts.UI import Button, ButtonGroup, DopText
 
 
 # распиление мироздания
@@ -21,13 +21,14 @@ def terminate():
     sys.exit()
 
 
-def change_save_file(DAYCH: int, points: int = 0, money: int = 0):
+def change_save_file(money_lists: list, points_list: list, DAYCH: int, points: int = 0, money: int = 0):
     df = pandas.read_csv('data/saves/save1', header=None, sep=' ')
     new_value = points
-    df.iloc[0, DAYCH - 1] = int(new_value)
-    df.to_csv('data/saves/save1', header=False, index=False, sep=' ')
+    if new_value > float(points_list[DAYCH - 1]):
+        df.iloc[0, DAYCH - 1] = float(new_value)
+        df.to_csv('data/saves/save1', header=False, index=False, sep=' ')
     new_valuem = money
-    df.iloc[1, DAYCH - 1] = int(new_valuem)
+    df.iloc[1, DAYCH - 1] = float(new_valuem) + float(money_lists[DAYCH - 1])
     df.to_csv('data/saves/save1', header=False, index=False, sep=' ')
     with open('data/saves/save1', 'r') as file:
         file.close()
@@ -222,6 +223,7 @@ class Tile(pygame.sprite.Sprite):
             bankomat_group.add(self)
             # tiles_blocks_group.add(self)
 
+
 # class AppleBox(pygame.sprite.Sprite):
 
 #   def __init__(self, x , y):
@@ -305,8 +307,8 @@ class Customer(pygame.sprite.Sprite):
         self.response.clear()
         self.d.add_resp()
         self.cw.kill()
-        #pl.drop()
-        #armed = False
+        # pl.drop()
+        # armed = False
 
     def update(self):
         if self.active:
@@ -316,6 +318,7 @@ class Customer(pygame.sprite.Sprite):
             if pygame.time.get_ticks() - self.wait_timer > self.wait_seconds * 1000:
                 self.clear()
         if len(self.response) == 0 and self.active:
+            create(1, True, "money", self.x, self.y, True)
             self.clear()
             return self.c_of_resp * 100
         if pygame.sprite.spritecollideany(self, items_group) and self.active:
@@ -324,7 +327,7 @@ class Customer(pygame.sprite.Sprite):
                 for a in pygame.sprite.spritecollide(self, items_group, 0):
                     if i == a.name and \
                             a.working:
-                        #pl.drop()
+                        # pl.drop()
                         pl.inventory = "None"
                         armed = False
 
@@ -420,9 +423,10 @@ class Player(pygame.sprite.Sprite):
             pygame.sprite.spritecollide(self, items_group, 0)[0].cook()
 
     def put_money(self) -> int:
-        if pygame.sprite.spritecollideany(self, bankomat_group):
-            pygame.sprite.spritecollide(self, items_group, 1)[0].cook()
-            return 100
+        if pygame.sprite.spritecollideany(self, bankomat_group) and pygame.sprite.spritecollideany(self, items_group):
+            if pygame.sprite.spritecollide(self, items_group, 1)[0].name == "money":
+                self.drop()
+                return 100
         return 0
 
 
@@ -531,7 +535,7 @@ def create(count: int, dropped, item: str, x, y, workings: bool):
             item = Item(pl.x / tile_width, pl.y / tile_height, item, workings)
         if workings:
             item.dropped = dropped
-            #print(item.image, item.name, item.dropped, item.x, item.y, pl.x, pl.y)
+            # print(item.image, item.name, item.dropped, item.x, item.y, pl.x, pl.y)
             items_group.draw(screen)
             pl.items.append(item)
 
@@ -695,7 +699,7 @@ if __name__ == '__main__':
                 started = False
                 t.stop()
                 start_screen()
-                change_save_file(DAY_CHOOSE, LEVEL_POINTS, LEVEL_MONEY)
+                change_save_file(level_respect, level_money,DAY_CHOOSE, LEVEL_POINTS, LEVEL_MONEY)
                 level_money, level_respect = load_days('save1', 'data/saves')
 
                 next_page(DAY_CHOOSE, screen, level_money, level_respect)
@@ -731,14 +735,14 @@ if __name__ == '__main__':
             electro_plate_group.draw(screen)
             holodilnik_group.draw(screen)
             items_group.draw(screen)
+            bankomat_group.draw(screen)
             player_group.draw(screen)
             customer_group.draw(screen)
-
             if t.update():
                 started = False
                 t.stop()
                 start_screen()
-                change_save_file(DAY_CHOOSE, LEVEL_POINTS, LEVEL_MONEY)
+                change_save_file(level_respect, level_money,DAY_CHOOSE, LEVEL_POINTS, LEVEL_MONEY)
                 level_money, level_respect = load_days('save1', 'data/saves')
 
                 next_page(DAY_CHOOSE, screen, level_money, level_respect)
