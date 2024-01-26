@@ -537,7 +537,7 @@ def create(count: int, dropped, item: str, x, y, workings: bool):
 
 
 def next_page(DAY_CHOOSE, screen, money_list, respect_list):
-    if DAY_CHOOSE < 6:
+    if DAY_CHOOSE < MAX_DAYS:
         DAY_CHOOSE += 1
         calendare_text1.retext(newtext=f'DAY {DAY_CHOOSE}', screen=screen)
         calendare_text2.retext(newtext=f'{money_list[DAY_CHOOSE - 1]}', screen=screen)
@@ -568,6 +568,7 @@ if __name__ == '__main__':
     level_choose = False
     DAY_CHOOSE = 1
     DAY = 0
+    MAX_DAYS = 6
     buttons_group = ButtonGroup()
     levels_buttons_group = ButtonGroup()
     start_button = Button(img=str_btn_img, hover_img=hv_str_btn_img, pos=(100, HEIGHT // 2), width=80, height=80,
@@ -690,7 +691,20 @@ if __name__ == '__main__':
             if keys[pygame.K_q] and armed:
                 pl.drop()
                 armed = False
+            if keys[pygame.K_r]:
+                started = False
+                t.stop()
+                start_screen()
+                change_save_file(DAY_CHOOSE, LEVEL_POINTS, LEVEL_MONEY)
+                level_money, level_respect = load_days('save1', 'data/saves')
 
+                next_page(DAY_CHOOSE, screen, level_money, level_respect)
+                prev_page(DAY_CHOOSE, screen, level_money, level_respect)
+
+                start_screen()
+
+                LEVEL_MONEY = 0
+                LEVEL_POINTS = 0
             if keys[pygame.K_w]:
                 player_image = load_image('player.png', 'data/images')
                 pl.move(0, -0.2)
