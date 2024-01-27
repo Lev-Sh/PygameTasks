@@ -71,6 +71,7 @@ def get_level_customers(filename):
 
     with open(filename, 'r', encoding='utf-8') as fl:
         level_c_customerss = fl.readlines()[12]
+        print(level_c_customerss, fl)
     return int(level_c_customerss)
 
 
@@ -119,6 +120,7 @@ customers_images = {
 }
 
 all_customers = []
+all_items = []
 player_image = load_image('player.png', 'data/images')
 
 apple_image = load_image('apple.png', 'data/images')
@@ -255,6 +257,11 @@ class Dialogue(pygame.sprite.Sprite):
     def change(self, im):
         self.image = customers_can_response[im]
 
+    def destroy(self):
+        for i in self.drawing_items:
+            i.kill()
+        self.drawing_items.clear()
+
 
 class Customer_wait(pygame.sprite.Sprite):
     def __init__(self, x, y):
@@ -286,7 +293,6 @@ class Customer(pygame.sprite.Sprite):
         self.active = True
         self.x = 0
         self.y = 0
-        # self.cw = Customer_wait(self.x, self.y)
 
     def clear(self):
         self.prev_awake = pygame.time.get_ticks()
@@ -295,8 +301,6 @@ class Customer(pygame.sprite.Sprite):
         self.response.clear()
         self.d.add_resp()
         self.cw.kill()
-        # pl.drop()
-        # armed = False
 
     def update(self):
         if self.active:
@@ -310,7 +314,6 @@ class Customer(pygame.sprite.Sprite):
             self.clear()
             return self.c_of_resp * 100
         if pygame.sprite.spritecollideany(self, items_group) and self.active:
-            # if len(pygame.sprite.spritecollide(self, items_group, 0)) > 0:
             for i in self.response:
                 for a in pygame.sprite.spritecollide(self, items_group, 0):
                     if i == a.name and \
@@ -329,15 +332,6 @@ class Customer(pygame.sprite.Sprite):
             self.prev_awake = 0
         return 0
 
-    # def moving(self, mx, my):
-    #    self.rect.move_ip(mx * tile_width, my * tile_height)
-    #    self.x += mx * tile_width
-    #    self.y += my * tile_height
-    #    if pygame.sprite.spritecollideany(selfw, tiles_blocks_group):
-    #        self.rect.move_ip(-mx * tile_width, -my * tile_height)
-    #        self.x += -mx * tile_width
-    #        self.y += -my * tile_height
-
     def awake(self, pos_x, pos_y):
         if pygame.sprite.spritecollideany(self, customer_group) and self.active:
             pos_x += 1
@@ -352,12 +346,13 @@ class Customer(pygame.sprite.Sprite):
 
         self.rect = self.image.get_rect().move(
             tile_width * pos_x + 15, tile_height * pos_y + 5)
-        all_customers.append(self)
         self.d = Dialogue(pos_x, pos_y, self.response)
 
     def gone(self):
         self.image = load_image('None.png', 'data/images')
         self.d.change('None')
+        self.d.destroy()
+        self.cw.kill()
 
 
 class Player(pygame.sprite.Sprite):
@@ -526,6 +521,7 @@ def create(count: int, dropped, item: str, x, y, workings: bool):
             # print(item.image, item.name, item.dropped, item.x, item.y, pl.x, pl.y)
             items_group.draw(screen)
             pl.items.append(item)
+        all_items.append(item)
 
 
 def next_page(DAY_CHOOSE, screen, money_list, respect_list):
@@ -569,7 +565,7 @@ if __name__ == '__main__':
     back_button = Button(img=str_btn_img, hover_img=hv_str_btn_img, pos=(50, 50), width=80, height=80,
                          color=pygame.color.Color(250, 250, 250), group=buttons_group)
     back_button_text = DopText(0, 0, back_button, text="BACK", text_color=pygame.color.Color(0, 0, 0), text_size=30)
-    calendare_button = Button(img=level1_btn_img, hover_img=str_btn_img, pos=(300, 200), width=280, height=300,
+    calendare_button = Button(img=level1_btn_img, hover_img=level1_btn_img, pos=(300, 200), width=280, height=300,
                               color=pygame.color.Color(250, 250, 250), group=levels_buttons_group)
     calendare_button_prev = Button(img=right_arrow, hover_img=right_arrow, pos=(200, 360), width=40, height=50,
                                    color=pygame.color.Color(250, 250, 250), group=levels_buttons_group)
@@ -646,15 +642,22 @@ if __name__ == '__main__':
                     apple_box_group.draw(screen)
                     holodilnik_group.draw(screen)
                     electro_plate_group.draw(screen)
+                    level_c_customers = 0
                     level_c_customers = get_level_customers(f'level{DAY_CHOOSE}.dat')
+
                     for n in all_customers:
                         n.clear()
                         n.kill()
+                    for n in all_items:
+                        n.kill()
+                    all_customers.clear()
+                    all_items.clear()
                     for k in range(level_c_customers):
                         c = Customer()
                         c.awake(random.randrange(0, 6), random.randrange(1, 4))
                         all_customers.append(c)
                         customer_group.draw(screen)
+                        print('1')
 
                     # create(2, True, "apple", pl.x, pl.y, True)
                     create(2, True, "beef", 200, 200, True)
@@ -675,6 +678,7 @@ if __name__ == '__main__':
 
             keys = pygame.key.get_pressed()
             if keys[pygame.K_e]:
+                print(len(all_customers))
                 pl.cook_item()
                 LEVEL_MONEY += pl.put_money()
             if keys[pygame.K_SPACE] and not armed:
@@ -733,7 +737,10 @@ if __name__ == '__main__':
                 change_save_file(level_respect, level_money,DAY_CHOOSE, LEVEL_POINTS, LEVEL_MONEY)
                 level_money, level_respect = load_days('save1', 'data/saves')
                 for i in all_customers:
+                    i.gone()
                     i.clear()
+                    i.kill()
+
                 all_customers.clear()
 
                 next_page(DAY_CHOOSE, screen, level_money, level_respect)
